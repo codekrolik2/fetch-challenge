@@ -7,6 +7,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import ru.tinkoff.kora.json.common.JsonReader;
+import ru.tinkoff.kora.json.common.JsonWriter;
 import ru.tinkoff.kora.test.extension.junit5.KoraAppTest;
 import ru.tinkoff.kora.test.extension.junit5.TestComponent;
 import ru.tinkoff.kora.validation.common.ValidationContext;
@@ -56,6 +57,8 @@ class ReceiptServiceTest {
 
     @TestComponent
     JsonReader<Receipt> receiptReader;
+    @TestComponent
+    JsonWriter<Receipt> receiptWriter;
 
     Receipt loadReceiptFromResource(String path) throws IOException {
         String json = Resources.toString(Resources.getResource(path), Charsets.UTF_8);
@@ -87,8 +90,8 @@ class ReceiptServiceTest {
     }
 
     @Test
-    void testNotFoundReturns404() {
-        ReceiptsDelegate receiptsDelegate = new ReceiptsDelegate(NO_ISSUES);
+    void testNotFoundReturns404() throws IOException {
+        ReceiptsDelegate receiptsDelegate = new ReceiptsDelegate(NO_ISSUES, receiptWriter, receiptReader);
         assertInstanceOf(ReceiptsIdPointsGet404ApiResponse.class, receiptsDelegate.receiptsIdPointsGet("this id does not exist"));
     }
 
@@ -96,7 +99,7 @@ class ReceiptServiceTest {
     void testMAndM() throws IOException {
         Receipt receipt = createMAndMReceipt();
 
-        ReceiptsDelegate receiptsDelegate = new ReceiptsDelegate(NO_ISSUES);
+        ReceiptsDelegate receiptsDelegate = new ReceiptsDelegate(NO_ISSUES, receiptWriter, receiptReader);
         ReceiptsProcessPost200ApiResponse idResponse = (ReceiptsProcessPost200ApiResponse)receiptsDelegate.receiptsProcessPost(receipt);
         String id = idResponse.content().id();
 
@@ -110,7 +113,7 @@ class ReceiptServiceTest {
     void testWithIssuesReturns400() throws IOException {
         Receipt receipt = createMAndMReceipt();
 
-        ReceiptsDelegate receiptsDelegate = new ReceiptsDelegate(ISSUES);
+        ReceiptsDelegate receiptsDelegate = new ReceiptsDelegate(ISSUES, receiptWriter, receiptReader);
 
         assertInstanceOf(ReceiptsProcessPost400ApiResponse.class, receiptsDelegate.receiptsProcessPost(receipt));
     }
@@ -119,7 +122,7 @@ class ReceiptServiceTest {
     void testWrongTimeFormatReturns400() throws IOException {
         Receipt receipt = createIncorrectTimeReceipt();
 
-        ReceiptsDelegate receiptsDelegate = new ReceiptsDelegate(NO_ISSUES);
+        ReceiptsDelegate receiptsDelegate = new ReceiptsDelegate(NO_ISSUES, receiptWriter, receiptReader);
 
         assertInstanceOf(ReceiptsProcessPost400ApiResponse.class, receiptsDelegate.receiptsProcessPost(receipt));
     }
@@ -128,7 +131,7 @@ class ReceiptServiceTest {
     void testTarget() throws IOException {
         Receipt receipt = createTargetReceipt();
 
-        ReceiptsDelegate receiptsDelegate = new ReceiptsDelegate(NO_ISSUES);
+        ReceiptsDelegate receiptsDelegate = new ReceiptsDelegate(NO_ISSUES, receiptWriter, receiptReader);
         ReceiptsProcessPost200ApiResponse idResponse = (ReceiptsProcessPost200ApiResponse)receiptsDelegate.receiptsProcessPost(receipt);
         String id = idResponse.content().id();
 
