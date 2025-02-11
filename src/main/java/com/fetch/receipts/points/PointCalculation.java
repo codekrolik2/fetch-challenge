@@ -16,7 +16,6 @@ public class PointCalculation {
 
     /**
      * These rules collectively define how many points should be awarded to a receipt.
-     *
      *     - One point for every alphanumeric character in the retailer name.
      *     - 50 points if the total is a round dollar amount with no cents.
      *     - 25 points if the total is a multiple of 0.25.
@@ -32,11 +31,9 @@ public class PointCalculation {
     }
 
     public static long calculatePoints(List<PointCalculator> calculators, Receipt receipt) {
-        System.out.println("==================================================");
         long points = 0;
         for (PointCalculator calculator : calculators) {
             long addPoints = calculator.getPoints(receipt);
-            System.out.println(calculator.getClass() + " " + addPoints);
             points += addPoints;
         }
         return points;
