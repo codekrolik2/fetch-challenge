@@ -1,25 +1,30 @@
 package com.fetch.receipts.api;
 
-import com.fetch.receipts.model.Item;
 import com.fetch.receipts.model.Receipt;
+import com.google.common.base.Charsets;
+import com.google.common.io.Resources;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Test;
-import org.testcontainers.junit.jupiter.Testcontainers;
+import ru.tinkoff.kora.json.common.JsonReader;
+import ru.tinkoff.kora.test.extension.junit5.KoraAppTest;
+import ru.tinkoff.kora.test.extension.junit5.TestComponent;
 import ru.tinkoff.kora.validation.common.ValidationContext;
 import ru.tinkoff.kora.validation.common.Validator;
 import ru.tinkoff.kora.validation.common.Violation;
 
-import java.time.LocalDate;
+import java.io.IOException;
 import java.util.List;
 
 import static com.fetch.receipts.api.DefaultApiResponses.ReceiptsProcessPostApiResponse.ReceiptsProcessPost200ApiResponse;
 import static com.fetch.receipts.api.DefaultApiResponses.ReceiptsProcessPostApiResponse.ReceiptsProcessPost400ApiResponse;
 import static com.fetch.receipts.api.DefaultApiResponses.ReceiptsIdPointsGetApiResponse.ReceiptsIdPointsGet200ApiResponse;
 import static com.fetch.receipts.api.DefaultApiResponses.ReceiptsIdPointsGetApiResponse.ReceiptsIdPointsGet404ApiResponse;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
-@Testcontainers
+@KoraAppTest(Application.class)
 class ReceiptServiceTest {
     static final Validator<Receipt> NO_ISSUES = new Validator<>() {
         @Override
@@ -49,46 +54,28 @@ class ReceiptServiceTest {
     static final long MM_POINTS = 109;
     static final long TARGET_POINTS = 28;
 
-    static Receipt createMAndMReceipt() {
-        String retailer = "M&M Corner Market";
-        LocalDate purchaseDate = LocalDate.of(2022, 3, 20);
-        String purchaseTime = "14:33";
-        List<Item> items = List.of(
-                new Item("Gatorade", "2.25"),
-                new Item("Gatorade", "2.25"),
-                new Item("Gatorade", "2.25"),
-                new Item("Gatorade", "2.25")
-        );
-        String total = "9.00";
-        return new Receipt(retailer, purchaseDate, purchaseTime, items, total);
+    @TestComponent
+    JsonReader<Receipt> receiptReader;
+
+    Receipt loadReceiptFromResource(String path) throws IOException {
+        String json = Resources.toString(Resources.getResource(path), Charsets.UTF_8);
+        return receiptReader.read(json);
     }
 
-    static Receipt createIncorrectTimeReceipt() {
-        String retailer = "M&M Corner Market";
-        LocalDate purchaseDate = LocalDate.of(2022, 3, 20);
-        String purchaseTime = "14:33:12";
-        List<Item> items = List.of();
-        String total = "9.00";
-        return new Receipt(retailer, purchaseDate, purchaseTime, items, total);
+    Receipt createMAndMReceipt() throws IOException {
+        return loadReceiptFromResource("mmReceipt.json");
     }
 
-    static Receipt createTargetReceipt() {
-        String retailer = "Target";
-        LocalDate purchaseDate = LocalDate.of(2022, 1, 1);
-        String purchaseTime = "13:01";
-        List<Item> items = List.of(
-                new Item("Mountain Dew 12PK", "6.49"),
-                new Item("Emils Cheese Pizza", "12.25"),
-                new Item("Knorr Creamy Chicken", "1.26"),
-                new Item("Doritos Nacho Cheese", "3.35"),
-                new Item("   Klarbrunn 12-PK 12 FL OZ  ", "12.00")
-        );
-        String total = "35.35";
-        return new Receipt(retailer, purchaseDate, purchaseTime, items, total);
+    Receipt createIncorrectTimeReceipt() throws IOException {
+        return loadReceiptFromResource("incorrectTimeReceipt.json");
+    }
+
+    Receipt createTargetReceipt() throws IOException {
+        return loadReceiptFromResource("targetReceipt.json");
     }
 
     @Test
-    void equalityTest() {
+    void equalityTest() throws IOException {
         Receipt receipt1MM = createMAndMReceipt();
         Receipt receipt2MM = createMAndMReceipt();
         Receipt receipt1T = createTargetReceipt();
@@ -102,11 +89,11 @@ class ReceiptServiceTest {
     @Test
     void testNotFoundReturns404() {
         ReceiptsDelegate receiptsDelegate = new ReceiptsDelegate(NO_ISSUES);
-        assertTrue(receiptsDelegate.receiptsIdPointsGet("this id does not exist") instanceof ReceiptsIdPointsGet404ApiResponse);
+        assertInstanceOf(ReceiptsIdPointsGet404ApiResponse.class, receiptsDelegate.receiptsIdPointsGet("this id does not exist"));
     }
 
     @Test
-    void testMAndM() {
+    void testMAndM() throws IOException {
         Receipt receipt = createMAndMReceipt();
 
         ReceiptsDelegate receiptsDelegate = new ReceiptsDelegate(NO_ISSUES);
@@ -120,25 +107,25 @@ class ReceiptServiceTest {
     }
 
     @Test
-    void testWithIssuesReturns400() {
+    void testWithIssuesReturns400() throws IOException {
         Receipt receipt = createMAndMReceipt();
 
         ReceiptsDelegate receiptsDelegate = new ReceiptsDelegate(ISSUES);
 
-        assertTrue(receiptsDelegate.receiptsProcessPost(receipt) instanceof ReceiptsProcessPost400ApiResponse);
+        assertInstanceOf(ReceiptsProcessPost400ApiResponse.class, receiptsDelegate.receiptsProcessPost(receipt));
     }
 
     @Test
-    void testWrongTimeFormatReturns400() {
+    void testWrongTimeFormatReturns400() throws IOException {
         Receipt receipt = createIncorrectTimeReceipt();
 
         ReceiptsDelegate receiptsDelegate = new ReceiptsDelegate(NO_ISSUES);
 
-        assertTrue(receiptsDelegate.receiptsProcessPost(receipt) instanceof ReceiptsProcessPost400ApiResponse);
+        assertInstanceOf(ReceiptsProcessPost400ApiResponse.class, receiptsDelegate.receiptsProcessPost(receipt));
     }
 
     @Test
-    void testTarget() {
+    void testTarget() throws IOException {
         Receipt receipt = createTargetReceipt();
 
         ReceiptsDelegate receiptsDelegate = new ReceiptsDelegate(NO_ISSUES);
