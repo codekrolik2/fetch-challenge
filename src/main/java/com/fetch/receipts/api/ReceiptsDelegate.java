@@ -4,8 +4,8 @@ import com.fetch.receipts.points.PointCalculation;
 import com.fetch.receipts.model.Receipt;
 import com.fetch.receipts.model.ReceiptsIdPointsGet200Response;
 import com.fetch.receipts.model.ReceiptsProcessPost200Response;
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import ru.tinkoff.kora.common.Component;
 import ru.tinkoff.kora.json.common.JsonReader;
 import ru.tinkoff.kora.json.common.JsonWriter;
@@ -27,7 +27,7 @@ public final class ReceiptsDelegate implements DefaultApiDelegate {
         this.receiptWriter = receiptWriter;
         this.receiptReader = receiptReader;
 
-        cache = CacheBuilder.newBuilder()
+        cache = Caffeine.newBuilder()
                 .maximumSize(RECEIPT_STORAGE_CAPACITY)
                 .build();
     }
